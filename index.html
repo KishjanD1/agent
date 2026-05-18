@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IT Helpdesk Assistant - Console</title>
+    
+    <!-- Premium Fonts & Icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-base: #0b0f19;
+            --bg-surface: rgba(17, 24, 39, 0.7);
+            --border-glass: rgba(255, 255, 255, 0.08);
+            --primary: #4f46e5;
+            --primary-glow: rgba(79, 70, 229, 0.4);
+            --secondary: #06b6d4;
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+            
+            /* Status Colors */
+            --color-db: #10b981;
+            --color-rag: #3b82f6;
+            --color-multi: #ec4899;
+            --color-tool: #f59e0b;
+            --color-llm: #06b6d4;
+            --color-error: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at 10% 20%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+                        radial-gradient(circle at 90% 80%, rgba(6, 182, 212, 0.12) 0%, transparent 40%),
+                        var(--bg-base);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+
+        /* Top Navigation Header */
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.25rem 2.5rem;
+            border-bottom: 1px solid var(--border-glass);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(11, 15, 25, 0.8);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 1.35rem;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #a5b4fc, #06b6d4);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .logo i {
+            -webkit-text-fill-color: initial;
+            background: linear-gradient(135deg, #6366f1, #06b6d4);
+            padding: 0.5rem;
+            border-radius: 12px;
+            color: white;
+            font-size: 1.15rem;
+            box-shadow: 0 0 15px rgba(99, 102, 241, 0.4);
+        }
+
+        .sys-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            padding: 0.4rem 0.85rem;
+            border-radius: 20px;
+            border: 1px solid rgba(16, 185, 129, 0.2);
+            transition: all 0.3s;
+        }
+
+        /* Main Dashboard Grid */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            flex-grow: 1;
+            max-width: 1600px;
+            margin: 1.5rem auto;
+            width: 95%;
+            gap: 1.5rem;
+            height: calc(100vh - 110px);
+        }
+
+        /* Left Side Control Panel */
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        .panel-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(16px);
+            border-radius: 20px;
+            padding: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #e5e7eb;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            padding-bottom: 0.75rem;
+        }
+
+        .panel-title i {
+            color: var(--secondary);
+        }
+
+        /* Ingestion Form Elements */
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 0.4rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            height: 120px;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-glass);
+            border-radius: 12px;
+            padding: 0.75rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.9rem;
+            resize: none;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .form-textarea:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.25);
+        }
+
+        .form-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            padding: 0.65rem 0.75rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.85rem;
+            outline: none;
+            transition: all 0.3s;
+        }
+
+        .form-input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(135deg, var(--primary), #6366f1);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 15px var(--primary-glow);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* Preset Query Badges */
+        .preset-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 0.65rem;
+        }
+
+        .preset-badge {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            padding: 0.7rem 0.9rem;
+            border-radius: 12px;
+            font-size: 0.82rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.3s;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .preset-badge:hover {
+            background: rgba(99, 102, 241, 0.08);
+            border-color: rgba(99, 102, 241, 0.3);
+            padding-left: 1.1rem;
+        }
+
+        .preset-badge i {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            transition: all 0.3s;
+        }
+
+        .preset-badge:hover i {
+            color: var(--secondary);
+            transform: translateX(3px);
+        }
+
+        /* Right Side Chat Console */
+        .chat-console {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-glass);
+            backdrop-filter: blur(16px);
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+            overflow: hidden;
+        }
+
+        /* Chat Header */
+        .chat-header {
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(15, 23, 42, 0.3);
+        }
+
+        .chat-title-box h2 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.15rem;
+            font-weight: 600;
+        }
+
+        .chat-title-box p {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        /* Message Display Area */
+        .message-view {
+            flex-grow: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1.75rem;
+            scroll-behavior: smooth;
+        }
+
+        .message-view::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .message-view::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .message-view::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .message-row {
+            display: flex;
+            width: 100%;
+            gap: 1rem;
+        }
+
+        .message-row.user {
+            justify-content: flex-end;
+        }
+
+        .avatar {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            flex-shrink: 0;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .message-row.assistant .avatar {
+            background: linear-gradient(135deg, #6366f1, #06b6d4);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .message-row.user .avatar {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            order: 2;
+        }
+
+        .message-content {
+            max-width: 75%;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .message-bubble {
+            padding: 1rem 1.25rem;
+            border-radius: 18px;
+            font-size: 0.92rem;
+            line-height: 1.5;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .message-row.assistant .message-bubble {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-glass);
+            border-top-left-radius: 4px;
+            color: #f3f4f6;
+        }
+
+        .message-row.user .message-bubble {
+            background: linear-gradient(135deg, #4f46e5, #4338ca);
+            border-top-right-radius: 4px;
+            color: white;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
+        }
+
+        /* Message Metadata Blocks */
+        .meta-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+            width: 100%;
+        }
+
+        .meta-header-row {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+
+        .decision-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 0.25rem 0.6rem;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .badge-db { background: rgba(16, 185, 129, 0.15); color: var(--color-db); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-rag { background: rgba(59, 130, 246, 0.15); color: var(--color-rag); border: 1px solid rgba(59, 130, 246, 0.3); }
+        .badge-multi { background: rgba(236, 72, 153, 0.15); color: var(--color-multi); border: 1px solid rgba(236, 72, 153, 0.3); }
+        .badge-tool { background: rgba(245, 158, 11, 0.15); color: var(--color-tool); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-llm { background: rgba(6, 182, 212, 0.15); color: var(--color-llm); border: 1px solid rgba(6, 182, 212, 0.3); }
+        .badge-error { background: rgba(239, 68, 68, 0.15); color: var(--color-error); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        .latency-ticker {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-glass);
+            padding: 0.2rem 0.5rem;
+            border-radius: 6px;
+            font-weight: 500;
+        }
+
+        /* Detail Accordion Panel */
+        .meta-accordion {
+            background: rgba(15, 23, 42, 0.4);
+            border: 1px solid var(--border-glass);
+            border-radius: 10px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .accordion-header {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(255, 255, 255, 0.01);
+            user-select: none;
+            transition: all 0.3s;
+        }
+
+        .accordion-header:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .accordion-content {
+            padding: 0.75rem;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.78rem;
+            color: #d1d5db;
+            background: rgba(0, 0, 0, 0.25);
+            border-top: 1px solid rgba(255, 255, 255, 0.03);
+            display: none;
+            white-space: pre-wrap;
+            line-height: 1.4;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        .accordion-content.active {
+            display: block;
+        }
+
+        /* RAG Chunks Area */
+        .rag-sources {
+            margin-top: 0.4rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.4rem;
+        }
+
+        .source-card {
+            background: rgba(59, 130, 246, 0.03);
+            border: 1px dashed rgba(59, 130, 246, 0.2);
+            padding: 0.6rem;
+            border-radius: 8px;
+            font-size: 0.75rem;
+        }
+
+        .source-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 0.25rem;
+            color: var(--color-rag);
+            font-weight: 600;
+        }
+
+        .source-similarity {
+            background: rgba(59, 130, 246, 0.1);
+            padding: 0.1rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.7rem;
+        }
+
+        .source-body {
+            color: var(--text-muted);
+            line-height: 1.35;
+        }
+
+        /* Dynamic Loading Bubbles */
+        .typing-bubble {
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.85rem 1.25rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-glass);
+            border-radius: 18px;
+            border-top-left-radius: 4px;
+            align-self: flex-start;
+        }
+
+        .typing-bubble span {
+            width: 7px;
+            height: 7px;
+            background: var(--text-muted);
+            border-radius: 50%;
+            display: inline-block;
+            animation: bounce 1.3s infinite ease-in-out;
+        }
+
+        .typing-bubble span:nth-child(2) { animation-delay: 0.15s; }
+        .typing-bubble span:nth-child(3) { animation-delay: 0.3s; }
+
+        @keyframes bounce {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-5px); background: var(--secondary); }
+        }
+
+        /* Message Console Input Bar */
+        .chat-input-bar {
+            padding: 1.5rem 2rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.05);
+            display: flex;
+            gap: 1rem;
+            background: rgba(15, 23, 42, 0.4);
+            align-items: center;
+        }
+
+        .input-wrapper {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        .console-input {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border-glass);
+            border-radius: 14px;
+            padding: 0.9rem 1.25rem;
+            color: var(--text-main);
+            font-family: inherit;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.3s;
+            padding-right: 3rem;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .console-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.15), inset 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .chat-send-btn {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.15rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 0.4rem;
+        }
+
+        .chat-send-btn:hover {
+            color: var(--secondary);
+            transform: translateY(-50%) scale(1.1);
+        }
+
+        /* Alert Toast Boxes */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(17, 24, 39, 0.9);
+            border: 1px solid var(--border-glass);
+            padding: 1rem 1.5rem;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast i {
+            font-size: 1.2rem;
+        }
+
+        .toast-success { border-color: rgba(16, 185, 129, 0.3); color: #10b981; }
+        .toast-error { border-color: rgba(239, 68, 68, 0.3); color: #ef4444; }
+    </style>
+</head>
+<body>
+
+    <!-- Header Navigation -->
+    <header>
+        <div class="logo">
+            <i class="fa-solid fa-microchip"></i>
+            <span>IT Helpdesk Assistant</span>
+        </div>
+        <div class="sys-status" id="sys-status">
+            <i class="fa-solid fa-circle-dot fa-fade" style="font-size: 8px;"></i>
+            <span>Aiven Cloud Live</span>
+        </div>
+    </header>
+
+    <!-- Dashboard Layout Grid -->
+    <div class="dashboard-container">
+        
+        <!-- Left Column: Knowledge Management & Controls -->
+        <div class="control-panel">
+            
+            <!-- Documentation Ingestion -->
+            <div class="panel-card">
+                <div class="panel-title">
+                    <i class="fa-solid fa-file-shield"></i>
+                    <span>RAG Document Ingestion</span>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Raw Text Content</label>
+                    <textarea class="form-textarea" id="ingest-content" placeholder="Paste manuals, configs, guidelines or IT troubleshooting policies..."></textarea>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Category</label>
+                    <input class="form-input" type="text" id="ingest-category" placeholder="e.g. network, hardware, deployment">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Document Title</label>
+                    <input class="form-input" type="text" id="ingest-title" placeholder="e.g. Corporate WiFi Guidelines">
+                </div>
+                
+                <button class="btn" id="btn-ingest">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Index in Aiven Cloud</span>
+                </button>
+            </div>
+            
+            <!-- Quick-Start Preset Prompts -->
+            <div class="panel-card" style="flex-grow: 1;">
+                <div class="panel-title">
+                    <i class="fa-solid fa-bolt"></i>
+                    <span>Quick-Start Prompts</span>
+                </div>
+                
+                <div class="preset-grid">
+                    <button class="preset-badge" data-query="How do I deploy the backend IT service?">
+                        <span>Deploy Backend Guide</span>
+                        <i class="fa-solid fa-circle-chevron-right"></i>
+                    </button>
+                    <button class="preset-badge" data-query="How many active users are currently registered in the database?">
+                        <span>Count Active Users</span>
+                        <i class="fa-solid fa-circle-chevron-right"></i>
+                    </button>
+                    <button class="preset-badge" data-query="List the usernames of all suspended accounts in the system.">
+                        <span>List Suspended Usernames</span>
+                        <i class="fa-solid fa-circle-chevron-right"></i>
+                    </button>
+                    <button class="preset-badge" data-query="What is the result of (1200 + 450) * 1.13?">
+                        <span>Calculate Math Expression</span>
+                        <i class="fa-solid fa-circle-chevron-right"></i>
+                    </button>
+                    <button class="preset-badge" data-query="How many users with the role 'developer' are in the system, and what is the exact Kubernetes command to deploy the backend service?">
+                        <span>Coordination (SQL + RAG)</span>
+                        <i class="fa-solid fa-circle-chevron-right"></i>
+                    </button>
+                    <button class="preset-badge" data-query="Explain what a DNS server does in simple terms.">
+                        <span>Direct Chat Explanation</span>
+                        <i class="fa-solid fa-circle-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+        
+        <!-- Right Column: Interactive Chat Console -->
+        <div class="chat-console">
+            
+            <!-- Console Header -->
+            <div class="chat-header">
+                <div class="chat-title-box">
+                    <h2>Conversational AI Console</h2>
+                    <p>Powered by Groq Llama 3.3 70B & Aiven PostgreSQL Vector Search</p>
+                </div>
+                <div class="latency-ticker" id="avg-latency-ticker" style="background: rgba(99,102,241,0.08);">
+                    Avg Latency: Tracking...
+                </div>
+            </div>
+            
+            <!-- Message Panel View -->
+            <div class="message-view" id="message-container">
+                
+                <!-- Hello Welcome Greeting -->
+                <div class="message-row assistant">
+                    <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                    <div class="message-content">
+                        <div class="message-bubble">
+                            Hello! I am your <strong>Internal IT Helpdesk & Knowledge Assistant</strong>, connected directly to your <strong>Aiven cloud database</strong>. 
+                            <br><br>
+                            I can automatically route and process requests across all 5 pipelines: direct conversations, semantic RAG guides, database SQL queries, custom tool executions, and multi-source coordination. 
+                            <br><br>
+                            Click on any of the <strong>Quick-Start Prompts</strong> on the left or type your query below to test me!
+                        </div>
+                    </div>
+                </div>
+                
+            </div>
+            
+            <!-- Message Input Panel -->
+            <div class="chat-input-bar">
+                <div class="input-wrapper">
+                    <input class="console-input" type="text" id="query-input" placeholder="Ask your helpdesk question or type arithmetic expression here...">
+                    <button class="chat-send-btn" id="btn-send"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+            
+        </div>
+        
+    </div>
+
+    <!-- Alert Toast Box -->
+    <div class="toast" id="toast-box">
+        <i class="fa-solid fa-circle-info" id="toast-icon"></i>
+        <span id="toast-message">Database initialized successfully</span>
+    </div>
+
+    <!-- Frontend Orchestration Script -->
+    <script>
+        const API_BASE = "http://127.0.0.1:8000";
+        
+        const messageContainer = document.getElementById("message-container");
+        const queryInput = document.getElementById("query-input");
+        const btnSend = document.getElementById("btn-send");
+        const btnIngest = document.getElementById("btn-ingest");
+        
+        // Ingestion Input Elements
+        const ingestContent = document.getElementById("ingest-content");
+        const ingestCategory = document.getElementById("ingest-category");
+        const ingestTitle = document.getElementById("ingest-title");
+        
+        const toastBox = document.getElementById("toast-box");
+        const toastIcon = document.getElementById("toast-icon");
+        const toastMessage = document.getElementById("toast-message");
+        
+        const avgLatencyTicker = document.getElementById("avg-latency-ticker");
+        
+        let totalQueries = 0;
+        let runningLatencySum = 0.0;
+
+        // Custom Toast Notification System
+        function showNotification(message, isSuccess = true) {
+            toastMessage.textContent = message;
+            toastBox.className = "toast show " + (isSuccess ? "toast-success" : "toast-error");
+            toastIcon.className = "fa-solid " + (isSuccess ? "fa-circle-check" : "fa-triangle-exclamation");
+            
+            setTimeout(() => {
+                toastBox.classList.remove("show");
+            }, 3500);
+        }
+
+        // Toggle Details Accordion in Chat Messages
+        function toggleAccordion(headerElement) {
+            const content = headerElement.nextElementSibling;
+            const icon = headerElement.querySelector("i");
+            content.classList.toggle("active");
+            if (content.classList.contains("active")) {
+                icon.className = "fa-solid fa-angle-up";
+            } else {
+                icon.className = "fa-solid fa-angle-down";
+            }
+        }
+
+        // Helper to format routing badge colors
+        function getRoutingBadgeClass(decision) {
+            switch (decision) {
+                case "DB_QUERY": return "badge-db";
+                case "RAG_RETRIEVAL": return "badge-rag";
+                case "MULTI_SOURCE": return "badge-multi";
+                case "TOOL_EXECUTION": return "badge-tool";
+                case "DIRECT_LLM": return "badge-llm";
+                default: return "badge-error";
+            }
+        }
+
+        // Process message stream and inject metadata UI cards
+        function addAssistantMessage(data) {
+            // Remove typing bubble if present
+            const loader = document.getElementById("typing-loader");
+            if (loader) loader.remove();
+            
+            const row = document.createElement("div");
+            row.className = "message-row assistant";
+            
+            let metaHtml = "";
+            
+            // Build rich technical diagnostic panels
+            if (data.routing_decision) {
+                const badgeClass = getRoutingBadgeClass(data.routing_decision);
+                let logsHtml = "";
+                let chunksHtml = "";
+                
+                // 1. Log database tools/SQL executions
+                if (data.tools_used && data.tools_used.length > 0) {
+                    const toolDetails = data.tools_used.map(t => {
+                        if (t.sql_executed) return `[SQL Run on Aiven]\n${t.sql_executed}`;
+                        if (t.tool) return `[Tool: ${t.tool} Executed]\nArgs: ${JSON.stringify(t.args, null, 2)}\nResult: ${JSON.stringify(t.result, null, 2)}`;
+                        return JSON.stringify(t, null, 2);
+                    }).join("\n\n");
+                    
+                    logsHtml = `
+                        <div class="meta-accordion">
+                            <div class="accordion-header" onclick="toggleAccordion(this)">
+                                <span><i class="fa-solid fa-terminal" style="color:var(--color-tool); margin-right:5px;"></i> View Tool & Database Logs</span>
+                                <i class="fa-solid fa-angle-down"></i>
+                            </div>
+                            <div class="accordion-content">${toolDetails}</div>
+                        </div>
+                    `;
+                }
+                
+                // 2. Log semantic documents retrieved (RAG)
+                if (data.retrieved_documents && data.retrieved_documents.length > 0) {
+                    const chunksList = data.retrieved_documents.map(doc => `
+                        <div class="source-card">
+                            <div class="source-header">
+                                <span><i class="fa-solid fa-file-lines"></i> ${doc.metadata?.title || 'System Guide'}</span>
+                                <span class="source-similarity">Sim: ${(doc.similarity * 100).toFixed(1)}%</span>
+                            </div>
+                            <div class="source-body">${doc.content}</div>
+                        </div>
+                    `).join("");
+                    
+                    chunksHtml = `
+                        <div class="meta-accordion" style="margin-top:0.4rem;">
+                            <div class="accordion-header" onclick="toggleAccordion(this)">
+                                <span><i class="fa-solid fa-magnifying-glass" style="color:var(--color-rag); margin-right:5px;"></i> View RAG Context (${data.retrieved_documents.length} Chunks)</span>
+                                <i class="fa-solid fa-angle-down"></i>
+                            </div>
+                            <div class="accordion-content">
+                                <div class="rag-sources">${chunksList}</div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                metaHtml = `
+                    <div class="meta-container">
+                        <div class="meta-header-row">
+                            <span class="decision-badge ${badgeClass}">
+                                <i class="fa-solid fa-route"></i> Route: ${data.routing_decision}
+                            </span>
+                            <span class="latency-ticker">
+                                <i class="fa-solid fa-stopwatch"></i> ${data.latency_seconds.toFixed(3)}s
+                            </span>
+                        </div>
+                        ${logsHtml}
+                        ${chunksHtml}
+                    </div>
+                `;
+            }
+            
+            row.innerHTML = `
+                <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="message-content">
+                    <div class="message-bubble">${data.response || data.detail || 'Received empty response from agent.'}</div>
+                    ${metaHtml}
+                </div>
+            `;
+            
+            messageContainer.appendChild(row);
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+            
+            // Update running average latency ticker
+            if (data.latency_seconds) {
+                totalQueries++;
+                runningLatencySum += data.latency_seconds;
+                const avg = runningLatencySum / totalQueries;
+                avgLatencyTicker.textContent = `Avg Latency: ${avg.toFixed(3)}s`;
+            }
+        }
+
+        // Add user text bubble to console
+        function addUserMessage(text) {
+            const row = document.createElement("div");
+            row.className = "message-row user";
+            row.innerHTML = `
+                <div class="avatar"><i class="fa-solid fa-user-astronaut"></i></div>
+                <div class="message-content">
+                    <div class="message-bubble">${text}</div>
+                </div>
+            `;
+            messageContainer.appendChild(row);
+            
+            // Add thinking/typing bubble
+            const loadingRow = document.createElement("div");
+            loadingRow.className = "message-row assistant";
+            loadingRow.id = "typing-loader";
+            loadingRow.innerHTML = `
+                <div class="avatar"><i class="fa-solid fa-robot"></i></div>
+                <div class="typing-bubble">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </div>
+            `;
+            messageContainer.appendChild(loadingRow);
+            
+            messageContainer.scrollTop = messageContainer.scrollHeight;
+        }
+
+        // Call query endpoint
+        async function submitQuery(queryText) {
+            if (!queryText.trim()) return;
+            
+            addUserMessage(queryText);
+            queryInput.value = "";
+            
+            try {
+                const response = await fetch(`${API_BASE}/query`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query: queryText })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    addAssistantMessage(data);
+                } else {
+                    addAssistantMessage({
+                        response: `⚠️ Pipeline execution error: ${data.detail || 'Internal server anomaly.'}`,
+                        routing_decision: "ERROR"
+                    });
+                    showNotification(data.detail || "Query execution failed.", false);
+                }
+            } catch (err) {
+                const loader = document.getElementById("typing-loader");
+                if (loader) loader.remove();
+                
+                addAssistantMessage({
+                    response: `⚠️ Network error: Cannot establish a connection with the backend IT server. Make sure it is running on ${API_BASE}.`,
+                    routing_decision: "CONNECTION_FAILED"
+                });
+                showNotification("Could not reach API backend server.", false);
+            }
+        }
+
+        // Call ingestion endpoint
+        async function submitIngestion() {
+            const textContent = ingestContent.value.trim();
+            const category = ingestCategory.value.trim();
+            const title = ingestTitle.value.trim();
+            
+            if (!textContent) {
+                showNotification("Please provide document content to index.", false);
+                return;
+            }
+            
+            btnIngest.disabled = true;
+            btnIngest.querySelector("span").textContent = "Indexing vector...";
+            btnIngest.querySelector("i").className = "fa-solid fa-circle-notch fa-spin";
+            
+            try {
+                const response = await fetch(`${API_BASE}/ingest`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        content: textContent,
+                        metadata: {
+                            category: category || "general",
+                            title: title || "Untitled Upload"
+                        }
+                    })
+                });
+                
+                const data = await response.json();
+                if (response.ok) {
+                    showNotification(`Indexed Successfully! Doc ID: ${data.document_id} (${data.chunks_count} Chunks)`);
+                    ingestContent.value = "";
+                    ingestCategory.value = "";
+                    ingestTitle.value = "";
+                } else {
+                    showNotification(data.detail || "Document ingestion failed.", false);
+                }
+            } catch (err) {
+                showNotification("Could not establish connection with API backend.", false);
+            } finally {
+                btnIngest.disabled = false;
+                btnIngest.querySelector("span").textContent = "Index in Aiven Cloud";
+                btnIngest.querySelector("i").className = "fa-solid fa-cloud-arrow-up";
+            }
+        }
+
+        // Event Hook listeners
+        btnSend.addEventListener("click", () => submitQuery(queryInput.value));
+        queryInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") submitQuery(queryInput.value);
+        });
+        
+        btnIngest.addEventListener("click", submitIngestion);
+        
+        // Quick-Start Badge hook mappings
+        document.querySelectorAll(".preset-badge").forEach(btn => {
+            btn.addEventListener("click", () => {
+                const query = btn.getAttribute("data-query");
+                submitQuery(query);
+            });
+        });
+    </script>
+</body>
+</html>
