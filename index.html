@@ -646,7 +646,7 @@
         </div>
         <div class="sys-status" id="sys-status">
             <i class="fa-solid fa-circle-dot fa-fade" style="font-size: 8px;"></i>
-            <span>Aiven Cloud Live</span>
+            <span>SQLite Database Live</span>
         </div>
     </header>
 
@@ -655,6 +655,23 @@
         
         <!-- Left Column: Knowledge Management & Controls -->
         <div class="control-panel">
+            
+            <!-- Connection Settings -->
+            <div class="panel-card">
+                <div class="panel-title">
+                    <i class="fa-solid fa-gears"></i>
+                    <span>System Settings</span>
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label class="form-label">API Backend URL</label>
+                    <div style="display: flex; gap: 0.5rem;">
+                        <input class="form-input" type="text" id="api-base-input" placeholder="http://127.0.0.1:8000" style="flex-grow: 1;">
+                        <button class="btn" id="btn-save-api" style="width: auto; padding: 0.65rem 1rem; box-shadow: none;" title="Save Backend URL">
+                            <i class="fa-solid fa-floppy-disk"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
             
             <!-- Documentation Ingestion -->
             <div class="panel-card">
@@ -680,7 +697,7 @@
                 
                 <button class="btn" id="btn-ingest">
                     <i class="fa-solid fa-cloud-arrow-up"></i>
-                    <span>Index in Aiven Cloud</span>
+                    <span>Index in SQLite DB</span>
                 </button>
             </div>
             
@@ -728,7 +745,7 @@
             <div class="chat-header">
                 <div class="chat-title-box">
                     <h2>Conversational AI Console</h2>
-                    <p>Powered by Groq Llama 3.3 70B & Aiven PostgreSQL Vector Search</p>
+                    <p>Powered by Groq Llama 3.3 70B & Local SQLite Vector Search</p>
                 </div>
                 <div class="latency-ticker" id="avg-latency-ticker" style="background: rgba(99,102,241,0.08);">
                     Avg Latency: Tracking...
@@ -743,7 +760,7 @@
                     <div class="avatar"><i class="fa-solid fa-robot"></i></div>
                     <div class="message-content">
                         <div class="message-bubble">
-                            Hello! I am your <strong>Internal IT Helpdesk & Knowledge Assistant</strong>, connected directly to your <strong>Aiven cloud database</strong>. 
+                            Hello! I am your <strong>Internal IT Helpdesk & Knowledge Assistant</strong>, connected directly to your <strong>local SQLite database</strong>. 
                             <br><br>
                             I can automatically route and process requests across all 5 pipelines: direct conversations, semantic RAG guides, database SQL queries, custom tool executions, and multi-source coordination. 
                             <br><br>
@@ -774,7 +791,13 @@
 
     <!-- Frontend Orchestration Script -->
     <script>
-        const API_BASE = "http://127.0.0.1:8000";
+        // Retrieve backend URL from localStorage or auto-detect based on hosting environment
+        let API_BASE = localStorage.getItem("API_BACKEND_URL");
+        if (!API_BASE) {
+            API_BASE = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" 
+                ? "http://127.0.0.1:8000" 
+                : window.location.origin;
+        }
         
         const messageContainer = document.getElementById("message-container");
         const queryInput = document.getElementById("query-input");
@@ -791,6 +814,10 @@
         const toastMessage = document.getElementById("toast-message");
         
         const avgLatencyTicker = document.getElementById("avg-latency-ticker");
+        
+        // System Settings Input Elements
+        const apiBaseInput = document.getElementById("api-base-input");
+        const btnSaveApi = document.getElementById("btn-save-api");
         
         let totalQueries = 0;
         let runningLatencySum = 0.0;
@@ -829,6 +856,66 @@
                 default: return "badge-error";
             }
         }
+
+        // Check real-time API Backend connection status
+        async function checkApiConnection() {
+            const statusEl = document.getElementById("sys-status");
+            if (!statusEl) return;
+            const statusSpan = statusEl.querySelector("span");
+            const statusIcon = statusEl.querySelector("i");
+            
+            try {
+                const res = await fetch(`${API_BASE}/`);
+                if (res.ok) {
+                    statusEl.style.background = "rgba(16, 185, 129, 0.1)";
+                    statusEl.style.color = "#10b981";
+                    statusEl.style.borderColor = "rgba(16, 185, 129, 0.2)";
+                    statusSpan.textContent = "API Server Online";
+                    statusIcon.className = "fa-solid fa-circle-dot fa-fade";
+                } else {
+                    statusEl.style.background = "rgba(245, 158, 11, 0.1)";
+                    statusEl.style.color = "#f59e0b";
+                    statusEl.style.borderColor = "rgba(245, 158, 11, 0.2)";
+                    statusSpan.textContent = "API Error Status";
+                    statusIcon.className = "fa-solid fa-triangle-exclamation";
+                }
+            } catch (err) {
+                statusEl.style.background = "rgba(239, 68, 68, 0.1)";
+                statusEl.style.color = "#ef4444";
+                statusEl.style.borderColor = "rgba(239, 68, 68, 0.2)";
+                statusSpan.textContent = "API Offline";
+                statusIcon.className = "fa-solid fa-circle-xmark";
+            }
+        }
+
+        // Initialize Settings Inputs
+        if (apiBaseInput) {
+            apiBaseInput.value = API_BASE;
+        }
+
+        if (btnSaveApi && apiBaseInput) {
+            btnSaveApi.addEventListener("click", () => {
+                const newUrl = apiBaseInput.value.trim();
+                if (!newUrl) {
+                    showNotification("API URL cannot be empty.", false);
+                    return;
+                }
+                API_BASE = newUrl;
+                localStorage.setItem("API_BACKEND_URL", newUrl);
+                showNotification("Backend URL updated successfully!");
+                checkApiConnection();
+            });
+            apiBaseInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter") {
+                    btnSaveApi.click();
+                }
+            });
+        }
+
+        // Call status check on startup
+        checkApiConnection();
+        // Periodically verify connection
+        setInterval(checkApiConnection, 30000);
 
         // Process message stream and inject metadata UI cards
         function addAssistantMessage(data) {
@@ -872,7 +959,7 @@
                         <div class="source-card">
                             <div class="source-header">
                                 <span><i class="fa-solid fa-file-lines"></i> ${doc.metadata?.title || 'System Guide'}</span>
-                                <span class="source-similarity">Sim: ${(doc.similarity * 100).toFixed(1)}%</span>
+                                <span class="source-similarity">Sim: ${typeof doc.similarity === 'number' ? (doc.similarity * 100).toFixed(1) + '%' : 'N/A'}</span>
                             </div>
                             <div class="source-body">${doc.content}</div>
                         </div>
@@ -898,7 +985,7 @@
                                 <i class="fa-solid fa-route"></i> Route: ${data.routing_decision}
                             </span>
                             <span class="latency-ticker">
-                                <i class="fa-solid fa-stopwatch"></i> ${data.latency_seconds.toFixed(3)}s
+                                <i class="fa-solid fa-stopwatch"></i> ${typeof data.latency_seconds === 'number' ? data.latency_seconds.toFixed(3) + 's' : 'N/A'}
                             </span>
                         </div>
                         ${logsHtml}
@@ -1033,7 +1120,7 @@
                 showNotification("Could not establish connection with API backend.", false);
             } finally {
                 btnIngest.disabled = false;
-                btnIngest.querySelector("span").textContent = "Index in Aiven Cloud";
+                btnIngest.querySelector("span").textContent = "Index in SQLite DB";
                 btnIngest.querySelector("i").className = "fa-solid fa-cloud-arrow-up";
             }
         }

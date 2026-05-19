@@ -81,76 +81,79 @@ def init_database():
     
     db = SessionLocal()
     try:
-        # Create dot product mathematical helper function
-        logger.info("Creating custom PL/pgSQL dot_product function...")
-        db.execute(text("""
-        CREATE OR REPLACE FUNCTION dot_product(a double precision[], b double precision[])
-        RETURNS double precision AS $$
-        DECLARE
-          s double precision := 0;
-          i integer;
-          len_a integer;
-          len_b integer;
-        BEGIN
-          len_a := cardinality(a);
-          len_b := cardinality(b);
-          IF len_a IS NULL OR len_b IS NULL OR len_a <> len_b THEN
-            RETURN 0;
-          END IF;
-          FOR i IN 1..len_a LOOP
-            s := s + a[i] * b[i];
-          END LOOP;
-          RETURN s;
-        END;
-        $$ LANGUAGE plpgsql IMMUTABLE;
-        """))
-        
-        # Create vector magnitude mathematical helper function
-        logger.info("Creating custom PL/pgSQL magnitude function...")
-        db.execute(text("""
-        CREATE OR REPLACE FUNCTION magnitude(a double precision[])
-        RETURNS double precision AS $$
-        DECLARE
-          s double precision := 0;
-          i integer;
-          len integer;
-        BEGIN
-          len := cardinality(a);
-          IF len IS NULL THEN
-            RETURN 0;
-          END IF;
-          FOR i IN 1..len LOOP
-            s := s + a[i] * a[i];
-          END LOOP;
-          RETURN sqrt(s);
-        END;
-        $$ LANGUAGE plpgsql IMMUTABLE;
-        """))
-        
-        # Create cosine similarity function combining both functions
-        logger.info("Creating custom PL/pgSQL cosine_similarity function...")
-        db.execute(text("""
-        CREATE OR REPLACE FUNCTION cosine_similarity(a double precision[], b double precision[])
-        RETURNS double precision AS $$
-        DECLARE
-          dp double precision;
-          mag_a double precision;
-          mag_b double precision;
-        BEGIN
-          dp := dot_product(a, b);
-          mag_a := magnitude(a);
-          mag_b := magnitude(b);
-          IF mag_a = 0 OR mag_b = 0 THEN
-            RETURN 0;
-          END IF;
-          RETURN dp / (mag_a * mag_b);
-        END;
-        $$ LANGUAGE plpgsql IMMUTABLE;
-        """))
-        
-        db.commit()
-        logger.info("Successfully registered custom similarity functions in PostgreSQL.")
-        
+        if engine.dialect.name != "sqlite":
+            # Create dot product mathematical helper function
+            logger.info("Creating custom PL/pgSQL dot_product function...")
+            db.execute(text("""
+            CREATE OR REPLACE FUNCTION dot_product(a double precision[], b double precision[])
+            RETURNS double precision AS $$
+            DECLARE
+              s double precision := 0;
+              i integer;
+              len_a integer;
+              len_b integer;
+            BEGIN
+              len_a := cardinality(a);
+              len_b := cardinality(b);
+              IF len_a IS NULL OR len_b IS NULL OR len_a <> len_b THEN
+                RETURN 0;
+              END IF;
+              FOR i IN 1..len_a LOOP
+                s := s + a[i] * b[i];
+              END LOOP;
+              RETURN s;
+            END;
+            $$ LANGUAGE plpgsql IMMUTABLE;
+            """))
+            
+            # Create vector magnitude mathematical helper function
+            logger.info("Creating custom PL/pgSQL magnitude function...")
+            db.execute(text("""
+            CREATE OR REPLACE FUNCTION magnitude(a double precision[])
+            RETURNS double precision AS $$
+            DECLARE
+              s double precision := 0;
+              i integer;
+              len integer;
+            BEGIN
+              len := cardinality(a);
+              IF len IS NULL THEN
+                RETURN 0;
+              END IF;
+              FOR i IN 1..len LOOP
+                s := s + a[i] * a[i];
+              END LOOP;
+              RETURN sqrt(s);
+            END;
+            $$ LANGUAGE plpgsql IMMUTABLE;
+            """))
+            
+            # Create cosine similarity function combining both functions
+            logger.info("Creating custom PL/pgSQL cosine_similarity function...")
+            db.execute(text("""
+            CREATE OR REPLACE FUNCTION cosine_similarity(a double precision[], b double precision[])
+            RETURNS double precision AS $$
+            DECLARE
+              dp double precision;
+              mag_a double precision;
+              mag_b double precision;
+            BEGIN
+              dp := dot_product(a, b);
+              mag_a := magnitude(a);
+              mag_b := magnitude(b);
+              IF mag_a = 0 OR mag_b = 0 THEN
+                RETURN 0;
+              END IF;
+              RETURN dp / (mag_a * mag_b);
+            END;
+            $$ LANGUAGE plpgsql IMMUTABLE;
+            """))
+            
+            db.commit()
+            logger.info("Successfully registered custom similarity functions in PostgreSQL.")
+        else:
+            logger.info("SQLite dialect detected. Skipping PL/pgSQL function registration (vector matching will be calculated in Python).")
+            
         # Seed initial data
         seed_data(db)
         

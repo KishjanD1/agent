@@ -120,38 +120,66 @@ def ingest_document(db: Session, content: str, metadata: dict = None) -> Documen
 
 def retrieve_relevant_chunks(db: Session, query: str, top_k: int = 3) -> list[dict]:
     """
-    RAG Retrieval:
+    RAG Retrieval (Database-Agnostic):
     1. Embed user query locally.
-    2. Run custom cosine similarity function in PostgreSQL database.
-    3. Retrieve the top-K matching chunks along with parent metadata.
+    2. Retrieve all stored document chunks.
+    3. Calculate cosine similarity in Python for seamless SQLite compatibility.
+    4. Retrieve the top-K matching chunks along with parent metadata.
     """
     logger.info(f"Retrieving top {top_k} relevant chunks for query: '{query}'")
     
     # Embed query
     query_emb = generate_embeddings([query])[0]
     
-    # PostgreSQL raw query calling custom cosine_similarity function
-    sql = text("""
-        SELECT dc.id, dc.document_id, dc.content, 
-               cosine_similarity(dc.embedding, :query_emb) AS similarity,
-               d.metadata AS doc_metadata
-        FROM document_chunks dc
-        JOIN documents d ON dc.document_id = d.id
-        ORDER BY similarity DESC
-        LIMIT :top_k;
-    """)
+    # Query all document chunks from the database
+    chunks = db.query(DocumentChunk).all()
     
-    results = db.execute(sql, {"query_emb": query_emb, "top_k": top_k}).fetchall()
-    
-    retrieved_chunks = []
-    for row in results:
-        retrieved_chunks.append({
-            "id": row[0],
-            "document_id": row[1],
-            "content": row[2],
-            "similarity": float(row[3]) if row[3] is not None else 0.0,
-            "metadata": row[4]
+    if not chunks:
+        logger.warning("No document chunks found in database.")
+        return []
+        
+    import math
+    def py_cosine_similarity(a: list[float], b: list[float]) -> float:
+        if not a or not b or len(a) != len(b):
+            return 0.0
+        dot_product = sum(x * y for x, y in zip(a, b))
+        magnitude_a = math.sqrt(sum(x * x for x in a))
+        magnitude_b = math.sqrt(sum(x * x for x in b))
+        if magnitude_a == 0.0 or magnitude_b == 0.0:
+            return 0.0
+        return dot_product / (magnitude_a * magnitude_b)
+        
+    scored_chunks = []
+    for chunk in chunks:
+        emb = chunk.embedding
+        if isinstance(emb, str):
+            import json
+            try:
+                emb = json.loads(emb)
+            except Exception as parse_err:
+                logger.error(f"Failed to parse embedding string from SQLite: {parse_err}")
+                continue
+                
+        if not isinstance(emb, list):
+            logger.error(f"Invalid embedding type: {type(emb)}")
+            continue
+            
+        similarity = py_cosine_similarity(emb, query_emb)
+        scored_chunks.append({
+            "id": chunk.id,
+            "document_id": chunk.document_id,
+            "content": chunk.content,
+            "similarity": similarity,
+            "metadata": chunk.document.doc_metadata if chunk.document else {}
         })
         
-    logger.info(f"Retrieved {len(retrieved_chunks)} relevant chunks. Top similarity: {retrieved_chunks[0]['similarity']:.4f}" if retrieved_chunks else "No chunks found.")
+    # Sort scored chunks by similarity descending
+    scored_chunks.sort(key=lambda x: x["similarity"], reverse=True)
+    retrieved_chunks = scored_chunks[:top_k]
+    
+    if retrieved_chunks:
+        logger.info(f"Retrieved {len(retrieved_chunks)} relevant chunks. Top similarity: {retrieved_chunks[0]['similarity']:.4f}")
+    else:
+        logger.info("No chunks found.")
+        
     return retrieved_chunks

@@ -1,5 +1,4 @@
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Float, JSON
-from sqlalchemy.dialects.postgresql import ARRAY, JSONB
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from db.session import Base
@@ -20,7 +19,7 @@ class Document(Base):
     id = Column(Integer, primary_key=True, index=True)
     content = Column(Text, nullable=False)
     # Map the Python property doc_metadata to the actual database column named "metadata"
-    doc_metadata = Column("metadata", JSONB, nullable=True, default={})
+    doc_metadata = Column("metadata", JSON, nullable=True, default={})
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationship to chunks
@@ -33,7 +32,7 @@ class DocumentChunk(Base):
     document_id = Column(Integer, ForeignKey("documents.id", ondelete="CASCADE"), nullable=False)
     chunk_index = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
-    embedding = Column(ARRAY(Float), nullable=False) # Represents double precision[] in Postgres
+    embedding = Column(JSON, nullable=False) # Stores the list of floats as a JSON array (database agnostic)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Parent relationship
@@ -46,6 +45,6 @@ class QueryLog(Base):
     input_query = Column(Text, nullable=False)
     output_response = Column(Text, nullable=False)
     routing_decision = Column(String(50), nullable=False)
-    tools_used = Column(JSONB, nullable=True, default=[])
+    tools_used = Column(JSON, nullable=True, default=[])
     latency = Column(Float, nullable=False)
     timestamp = Column(DateTime(timezone=True), server_default=func.now())
