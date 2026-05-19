@@ -14,13 +14,13 @@ def get_embedding_model():
     """Lazy load the local SentenceTransformer embedding model."""
     global _embedding_model
     if _embedding_model is None:
-        from sentence_transformers import SentenceTransformer
         logger.info("Activating Hugging Face Offline Mode to bypass network checks...")
         # Force offline mode so that it loads strictly from local disk cache, avoiding network timeouts
         os.environ["HF_HUB_OFFLINE"] = "1"
         os.environ["TRANSFORMERS_OFFLINE"] = "1"
         
         logger.info(f"Loading local embedding model: {settings.EMBEDDING_MODEL_NAME}...")
+        from sentence_transformers import SentenceTransformer
         _embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
         logger.info("Embedding model loaded successfully from local disk cache.")
     return _embedding_model
@@ -69,25 +69,10 @@ def chunk_text(text_content: str, chunk_size: int = 500, chunk_overlap: int = 10
     return chunks
 
 def generate_embeddings(texts: list[str]) -> list[list[float]]:
-    """Generate vector embeddings for a list of texts using Gemini if available, otherwise local model."""
+    """Generate vector embeddings for a list of texts using the local model."""
     if not texts:
         return []
-        
-    if settings.GEMINI_API_KEY:
-        try:
-            logger.info("Using cloud-based Gemini API for embeddings generation...")
-            from google import genai
-            client = genai.Client(api_key=settings.GEMINI_API_KEY)
-            response = client.models.embed_content(
-                model="models/gemini-embedding-001",
-                contents=texts,
-            )
-            # Extract float lists from response embeddings
-            return [emb.values for emb in response.embeddings]
-        except Exception as e:
-            logger.error(f"Gemini API embedding generation failed: {e}. Falling back to local SentenceTransformers...")
-            
-    # Local fallback
+    
     model = get_embedding_model()
     # encode outputs numpy array, convert to standard Python float list for PostgreSQL array compatibility
     embeddings = model.encode(texts)
